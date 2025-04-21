@@ -1,0 +1,69 @@
+﻿@model FileUpload;
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<h1>Gemini Doc Verifier</h1>
+
+<form enctype="multipart/form-data" method="post">
+    <dl>
+        <dt>
+            <label asp-for="FormFile"></label>
+        </dt>
+        <dd>
+            <input asp-for="FormFile" type="file" />
+            <span asp-validation-for="FormFile"></span>
+        </dd>
+    </dl>
+    <input asp-page-handler="Upload" class="btn" type="submit" value="Upload" />
+
+    @if (Model != null && Model.FormResponse != null)
+    {
+        <div class="accordion" id="accordionExample">
+            @foreach (var document in Model.FormResponse)
+            {
+                var _headerId = $"header{document.DocumentType}";
+                var _itemId = $"pageNumber{document.PageNumber}";
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="@_headerId">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#@_itemId" aria-expanded="true" aria-controls="@_itemId">
+                            @document.DocumentType.ToUpper() # Page Number : @document.PageNumber
+                        </button>
+                    </h2>
+                    <div id="@_itemId" class="accordion-collapse collapse show" aria-labelledby="@_headerId" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Key</th>
+                                        <th scope="col">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    @{
+                                        var _counter = 1;
+                                    }
+                                    @foreach (var fields in document.Fields)
+                                    {
+                                        <tr>
+                                            <th scope="row">@_counter</th>
+                                            <td>@fields.FieldName</td>
+                                            <td>@fields.Value</td>
+                                            @{
+                                                _counter = _counter + 1;
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            }
+        </div>
+    }
+</form>
