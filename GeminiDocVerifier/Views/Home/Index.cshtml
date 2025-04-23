@@ -6,64 +6,168 @@
 <h1>Gemini Doc Verifier</h1>
 
 <form enctype="multipart/form-data" method="post">
-    <dl>
-        <dt>
-            <label asp-for="FormFile"></label>
-        </dt>
-        <dd>
-            <input asp-for="FormFile" type="file" />
-            <span asp-validation-for="FormFile"></span>
-        </dd>
-    </dl>
-    <input asp-page-handler="Upload" class="btn" type="submit" value="Upload" />
+    <table>
+        <tr>
+            <td>
+                <dl>
+                    <dt>
+                        <label asp-for="FormFile"></label>
+                    </dt>
+                    <dd>
+                        <input asp-for="FormFile" type="file" />
+                        <span asp-validation-for="FormFile"></span>
+                    </dd>
+                </dl>
+
+                <input asp-page-handler="Upload" class="btn" type="submit" value="Upload" />
+            </td>
+            <td>
+                @if (Model != null && !string.IsNullOrEmpty(Model.Json))
+                {
+                    <textarea id="completeJSON" rows="20" cols="80">@Model.Json</textarea>
+                }
+            </td>
+        </tr>
+    </table>
 
     @if (Model != null && Model.FormResponse != null)
     {
         <div class="accordion" id="accordionExample">
+            @{
+                var _headerCounter = 1;
+            }
+
             @foreach (var document in Model.FormResponse)
             {
-                var _headerId = $"header{document.DocumentType}";
-                var _itemId = $"pageNumber{document.PageNumber}";
+                var _headerId = "";
+                var _headerText = "";
+                var _pageNumber = "";
+                try
+                {
+                    _headerId = $"header{document.documentType}";
+                    _headerText = $"{document.documentType}";
+                }
+                catch
+                {
+                }
+
+
+                if (string.IsNullOrEmpty(_headerText))
+                {
+                    try
+                    {
+                        _headerId = $"header{document.document_type}";
+                        _headerText = $"{document.document_type}";
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                try
+                {
+                    _pageNumber = $"header{document.pageNumber}";
+                }
+                catch
+                {
+
+                }
+
+                if (string.IsNullOrEmpty(_pageNumber))
+                {
+                    try
+                    {
+                        _pageNumber = $"header{document.page_number}";
+                    }
+                    catch
+                    {
+
+                    }
+                }
+
+
+                var _itemId = $"pageNumber{_pageNumber}{_headerCounter}";
+                var _tablebodyId = $"tableBody{_pageNumber}{_headerCounter}";
+                var _pageURL = string.Empty;
+                if (Model.ContentType.ToLower().Contains("pdf"))
+                {
+                    _pageURL = $"{Model.FilePath}/page_{_headerCounter}.pdf";
+                }
+                else
+                {
+                    _pageURL = _pageURL = $"{Model.FilePath}/{Model.FileName}";
+                }
+                _headerCounter = _headerCounter + 1;
+                var _headerValue = _headerText;
 
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="@_headerId">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#@_itemId" aria-expanded="true" aria-controls="@_itemId">
-                            @document.DocumentType.ToUpper() # Page Number : @document.PageNumber
+                            @_headerValue.ToUpper() # Page Number : @document.page_number
                         </button>
                     </h2>
                     <div id="@_itemId" class="accordion-collapse collapse show" aria-labelledby="@_headerId" data-bs-parent="#accordionExample">
                         <div class="accordion-body">
                             <table class="table">
                                 <thead>
-                                    <tr>
-                                        <th scope="col">#</th>
-                                        <th scope="col">Key</th>
-                                        <th scope="col">Value</th>
-                                    </tr>
+                                    <tr>Data</tr>
+                                    <tr>Document</tr>
                                 </thead>
                                 <tbody>
-
-                                    @{
-                                        var _counter = 1;
-                                    }
-                                    @foreach (var fields in document.Fields)
-                                    {
-                                        <tr>
-                                            <th scope="row">@_counter</th>
-                                            <td>@fields.FieldName</td>
-                                            <td>@fields.Value</td>
-                                            @{
-                                                _counter = _counter + 1;
-                                            }
-                                        </tr>
-                                    }
+                                    <tr>
+                                        <td>
+                                            <table class="table">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">Key</th>
+                                                        <th scope="col">Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="@_tablebodyId">
+                                                    <tr>
+                                                        <td>This is a test message</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                        <td>
+                                            <textarea hidden id="json" rows="20" cols="80" data-to-be-parsed data-to-be-render-control="@_tablebodyId">@document</textarea>
+                                            <embed src="@_pageURL" width="200px" height="200px" />
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-
             }
         </div>
     }
 </form>
+
+<script language="javascript">
+    var _textAreaControl = document.querySelectorAll('[data-to-be-parsed]');
+
+    _textAreaControl.forEach(function (item){
+        var _tbodyControlName = item.attributes["data-to-be-render-control"].value;
+        var _tbodyControl = document.getElementById(_tbodyControlName);
+        var _json = JSON.parse(item.value);
+        var _control_string = "";
+        for(const key in _json)
+        {
+            if(_json[key] != undefined && typeof(_json[key]) != "object")
+            {
+                _control_string = _control_string + "<tr><td>" + key + "</td><td>" + _json[key] + "</td></tr>";
+            }
+            else
+            {
+                const innerJson = _json[key]
+                for(const innerKey in innerJson)
+                {
+                    _control_string = _control_string + "<tr><td>" + innerKey + "</td><td>" + innerJson[innerKey] + "</td></tr>";
+                }
+            }
+        }
+        _tbodyControl.innerHTML = _control_string;
+    });
+</script>
